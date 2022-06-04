@@ -212,7 +212,7 @@ export default class Scholar {
 		}
 
 		return fetch(
-			'/search?' +
+			'/api/search?' +
 				Object.keys(queries)
 					.map((x) => `${x}=${queries[x]}`)
 					.join('&'),
