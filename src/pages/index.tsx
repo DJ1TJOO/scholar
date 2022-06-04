@@ -4,7 +4,7 @@ import { ChevronRightIcon, MenuIcon, XIcon } from '@heroicons/react/outline';
 import type { NextPage } from 'next';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Scholar from '../../serp-wrapper';
 
 const navigation = [
@@ -17,15 +17,19 @@ const Home: NextPage = () => {
 	const { search } = router.query;
 
 	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
+	const [result, setResult] = useState();
 
-	const results = useMemo(async () => {
-		if (typeof search !== 'string') return null;
+	useEffect(() => {
+		if (typeof search !== 'string') return;
 
-		const scholar = new Scholar();
-		const results = await scholar.search(search);
-		return results;
+		(async () => {
+			const scholar = new Scholar();
+			const results = await scholar.search(search);
+			setResult(results);
+		})();
 	}, [search]);
-	console.log(results);
+
+	console.log(result);
 
 	return (
 		<div className="relative overflow-hidden">
