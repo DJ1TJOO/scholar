@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	fetch(
-		`https://serpapi.com/search?api_key=${process.env.SCHOLAR_KEY}&` +
+		`https://serpapi.com/search?engine=google_scholar&api_key=${process.env.SCHOLAR_KEY}&` +
 			Object.keys(req.query)
 				.map((x) => `${x}=${req.query[x]}`)
 				.join('&'),
