@@ -13,18 +13,19 @@ const navigation = [
 ];
 
 const Home: NextPage = () => {
-	const [query, setQuery] = useState('');
-
 	const router = useRouter();
 	const { search } = router.query;
 
-	useMemo(() => {
-		if (typeof search !== 'string') return;
-		console.log(search);
+	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
+
+	const results = useMemo(async () => {
+		if (typeof search !== 'string') return null;
 
 		const scholar = new Scholar();
-		scholar.search(search).then((x) => console.log(x));
+		const results = await scholar.search(search);
+		return results;
 	}, [search]);
+	console.log(results);
 
 	return (
 		<div className="relative overflow-hidden">

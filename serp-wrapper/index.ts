@@ -222,11 +222,6 @@ export default class Scholar {
 					'Access-Control-Allow-Origin': '*',
 				},
 			},
-		)
-			.then((x) => {
-				console.log(x);
-				return x;
-			})
-			.then((x) => x.json());
+		).then((x) => x.json());
 	}
 }
