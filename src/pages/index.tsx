@@ -31,7 +31,48 @@ type result = {
 
 type resultText = result & {
 	resource: string;
+	words: { word: string; count: number }[];
+	category?: {
+		id: string;
+		counted: number;
+	};
 };
+
+type categorie = {
+	id: string;
+	title: string;
+	words: string[];
+};
+
+const categories: categorie[] = [
+	{
+		id: 'waterkwaliteit',
+		title: 'Waterkwaliteit',
+		words: [
+			'waterkwaliteit',
+			'nitraatrichtlijn',
+			'nitraatrapportage',
+			'waderrichtlijn',
+			'grondwaterkwaliteit',
+			'oppervlaktewaterkwaliteit',
+			'nitraat',
+			'stikstof',
+			'fosfor',
+			'eutrofiëring',
+			'ecosysteem',
+		],
+	},
+	{
+		id: 'drinkwater',
+		title: 'Drinkwater',
+		words: ['drinkwater', 'zoetwateropslag', 'waterarmoede', 'watertekort', 'waterverbruik', 'watervraag', 'zoetwaterbuffer', 'aquifer', 'onttrekking', 'concentratie'],
+	},
+	{
+		id: 'waterveiligheid',
+		title: 'Waterveiligheid',
+		words: ['waterveiligheid', 'deltawerken', 'deltatechniek', 'dijken', 'zeespiegel', 'deltabeslissing', 'overstroming', 'waterkering', 'waterbeheer', 'bescherming'],
+	},
+];
 
 const Home: NextPage = () => {
 	const router = useRouter();
@@ -56,93 +97,122 @@ const Home: NextPage = () => {
 
 		(async () => {
 			let offset = 0;
-			const result = await getArticles(offset);
+			const result: result[] = await getArticles(offset);
 			while (result.length < 30) {
 				offset += 20;
 				result.push(...(await getArticles(offset)));
 			}
+
 			setResult(result);
+			const newResultText = resultText;
+			for (let i = 0; i < result.length; i++) {
+				const itemResult = result[i];
+				const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
+				if (!resource) continue;
+
+				try {
+					const resultText = await new Promise((resolve: (value: resultText) => void, reject) => {
+						PDFJS.getDocument({
+							url: `https://corsproxy.io/?${encodeURIComponent(resource.link)}`,
+						})
+							.promise.then((pdf) => {
+								let total = pdf.numPages;
+								let pages: Record<number, string> = {};
+								let complete = 0;
+
+								for (let pagei = 1; pagei <= total; pagei++) {
+									pdf.getPage(pagei).then(function (page) {
+										let pageNumber = page.pageNumber;
+										page.getTextContent({
+											includeMarkedContent: false,
+											disableCombineTextItems: false,
+										}).then(function (textContent) {
+											if (null != textContent.items) {
+												let page_text = '';
+												let last_item = null;
+												for (let itemsi = 0; itemsi < textContent.items.length; itemsi++) {
+													let item = textContent.items[itemsi] as TextItem;
+													// I think to add whitespace properly would be more complex and
+													// would require two loops.
+													if (last_item != null && last_item.str[last_item.str.length - 1] != ' ') {
+														let itemX = item.transform[5];
+														let lastItemX = last_item.transform[5];
+														let itemY = item.transform[4];
+														let lastItemY = last_item.transform[4];
+														if (itemX < lastItemX) page_text += '\r\n';
+														else if (itemY != lastItemY && last_item.str.match(/^(\s?[a-zA-Z])$|^(.+\s[a-zA-Z])$/) == null) page_text += ' ';
+													} // ends if may need to add whitespace
+
+													page_text += item.str;
+													last_item = item;
+												} // ends for every item of text
+
+												// textContent != null && console.log('page ' + pageNumber + ' finished.'); // " content: \n" + page_text);
+												pages[pageNumber] = page_text + '\n\n';
+											} // ends if has items
+
+											++complete;
+
+											// If all done, put pages in order and combine all
+											// text, then pass that to the callback
+											if (complete == total) {
+												// Using `setTimeout()` isn't a stable way of making sure
+												// the process has finished. Watch out for missed pages.
+												// A future version might do this with promises.
+												setTimeout(function () {
+													let full_text = '';
+													let num_pages = Object.keys(pages).length;
+													for (let pageNum = 1; pageNum <= num_pages; pageNum++) full_text += pages[pageNum];
+
+													const wordCounts: Record<string, number> = {};
+													const words = full_text.split(/\b/);
+
+													for (var i = 0; i < words.length; i++) {
+														const word = words[i].toLowerCase();
+														wordCounts[word] = (wordCounts[word] || 0) + 1;
+													}
+
+													const wordsArray = Object.keys(wordCounts).map((x) => ({ word: x, count: wordCounts[x] }));
+													wordsArray.sort((a, b) => b.count - a.count);
+													resolve({
+														...itemResult,
+														resource: full_text,
+														words: wordsArray,
+													});
+												}, 1000);
+											}
+										}); // ends page.getTextContent().then
+									}); // ends page.then
+								} // ends for every page
+							})
+							.catch((x) => reject(x));
+					});
+					newResultText[itemResult.result_id] = resultText;
+				} catch (error) {}
+			}
+
+			for (const key in newResultText) {
+				const resultText = newResultText[key];
+				let currentCategorie = { id: '', counted: 0 };
+				for (let i = 0; i < categories.length; i++) {
+					const categorie = categories[i];
+
+					const words = resultText.words.filter((x) => categorie.words.some((y) => x.word.includes(y)));
+					const counted = words.reduce((partialSum, x) => partialSum + x.count, 0);
+					if (counted > currentCategorie.counted) {
+						currentCategorie = {
+							id: categorie.id,
+							counted,
+						};
+					}
+				}
+
+				if (currentCategorie.counted > 0) resultText.category = currentCategorie;
+			}
+
+			setResultText(newResultText);
 		})();
 	}, [search]);
-
-	useEffect(() => {
-		console.log(result);
-		for (let i = 0; i < result.length; i++) {
-			const itemResult = result[i];
-			const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
-			if (!resource) continue;
-
-			PDFJS.getDocument({
-				url: `https://api.allorigins.win/raw?url=${encodeURIComponent(resource.link)}`,
-			})
-				.promise.then((pdf) => {
-					let total = pdf.numPages;
-					let pages: Record<number, string> = {};
-					let complete = 0;
-
-					for (let pagei = 1; pagei <= total; pagei++) {
-						pdf.getPage(pagei).then(function (page) {
-							let pageNumber = page.pageNumber;
-							page.getTextContent({
-								includeMarkedContent: false,
-								disableCombineTextItems: false,
-							}).then(function (textContent) {
-								if (null != textContent.items) {
-									let page_text = '';
-									let last_item = null;
-									for (let itemsi = 0; itemsi < textContent.items.length; itemsi++) {
-										let item = textContent.items[itemsi] as TextItem;
-										// I think to add whitespace properly would be more complex and
-										// would require two loops.
-										if (last_item != null && last_item.str[last_item.str.length - 1] != ' ') {
-											let itemX = item.transform[5];
-											let lastItemX = last_item.transform[5];
-											let itemY = item.transform[4];
-											let lastItemY = last_item.transform[4];
-											if (itemX < lastItemX) page_text += '\r\n';
-											else if (itemY != lastItemY && last_item.str.match(/^(\s?[a-zA-Z])$|^(.+\s[a-zA-Z])$/) == null) page_text += ' ';
-										} // ends if may need to add whitespace
-
-										page_text += item.str;
-										last_item = item;
-									} // ends for every item of text
-
-									// textContent != null && console.log('page ' + pageNumber + ' finished.'); // " content: \n" + page_text);
-									pages[pageNumber] = page_text + '\n\n';
-								} // ends if has items
-
-								++complete;
-
-								// If all done, put pages in order and combine all
-								// text, then pass that to the callback
-								if (complete == total) {
-									// Using `setTimeout()` isn't a stable way of making sure
-									// the process has finished. Watch out for missed pages.
-									// A future version might do this with promises.
-									setTimeout(function () {
-										let full_text = '';
-										let num_pages = Object.keys(pages).length;
-										for (let pageNum = 1; pageNum <= num_pages; pageNum++) full_text += pages[pageNum];
-										setResultText({
-											...resultText,
-											[itemResult.result_id]: {
-												...itemResult,
-												resource: full_text,
-											},
-										});
-									}, 1000);
-								}
-							}); // ends page.getTextContent().then
-						}); // ends page.then
-					} // ends for every page
-				})
-				.catch((x) => console.log(x));
-		}
-	}, [result]);
-
-	useEffect(() => {
-		console.log(Object.keys(resultText).length);
-	}, [resultText]);
 
 	return (
 		<div className="relative overflow-hidden">
