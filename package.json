@@ -13,8 +13,12 @@
     "@heroicons/react": "^1.0.6",
     "next": "12.1.6",
     "node-fetch": "^3.2.5",
+    "pdf-parse": "^1.1.1",
+    "pdf2json": "^2.0.1",
+    "pdfjs-dist": "^2.14.305",
     "react": "18.1.0",
-    "react-dom": "18.1.0"
+    "react-dom": "18.1.0",
+    "react-pdf": "^5.7.2"
   },
   "devDependencies": {
     "@types/node": "17.0.39",

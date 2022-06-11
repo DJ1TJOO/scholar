@@ -1,34 +1,148 @@
 import { Popover, Transition } from '@headlessui/react';
-import { ChevronRightIcon, MenuIcon, XIcon } from '@heroicons/react/outline';
+import { MenuIcon, XIcon } from '@heroicons/react/outline';
 
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Scholar from '../../serp-wrapper';
+import * as PDFJS from 'pdfjs-dist';
+PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.js`;
+import { TextItem } from 'pdfjs-dist/types/src/display/api';
 
 const navigation = [
 	{ name: 'Features', href: '#' },
 	{ name: 'About', href: '#' },
 ];
 
+type result = {
+	line_links: {
+		cached_page_link?: string;
+		serpapi_cite_link: string;
+	};
+	link: string;
+	position: number;
+	publication_info: { summary: string };
+	resources: { title: string; file_format: string; link: string }[];
+
+	result_id: string;
+	snippet: string;
+	title: string;
+};
+
+type resultText = result & {
+	resource: string;
+};
+
 const Home: NextPage = () => {
 	const router = useRouter();
 	const { search } = router.query;
 
 	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
-	const [result, setResult] = useState();
+	const [result, setResult] = useState<result[]>([]);
+	const [resultText, setResultText] = useState<Record<string, resultText>>({});
+
+	const getArticles = async (offset: number): Promise<any[]> => {
+		if (typeof search !== 'string') return [];
+
+		const scholar = new Scholar();
+		const results: {
+			organic_results: result[];
+		} = await scholar.articles(1).start(offset).maxResults(20).search(search);
+		return results.organic_results.filter((x) => x.resources).filter((x) => x.resources.some((x) => x.file_format === 'PDF'));
+	};
 
 	useEffect(() => {
 		if (typeof search !== 'string') return;
 
 		(async () => {
-			const scholar = new Scholar();
-			const results = await scholar.search(search);
-			setResult(results);
+			let offset = 0;
+			const result = await getArticles(offset);
+			while (result.length < 30) {
+				offset += 20;
+				result.push(...(await getArticles(offset)));
+			}
+			setResult(result);
 		})();
 	}, [search]);
 
-	console.log(result);
+	useEffect(() => {
+		console.log(result);
+		for (let i = 0; i < result.length; i++) {
+			const itemResult = result[i];
+			const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
+			if (!resource) continue;
+
+			PDFJS.getDocument({
+				url: `https://api.allorigins.win/raw?url=${encodeURIComponent(resource.link)}`,
+			})
+				.promise.then((pdf) => {
+					let total = pdf.numPages;
+					let pages: Record<number, string> = {};
+					let complete = 0;
+
+					for (let pagei = 1; pagei <= total; pagei++) {
+						pdf.getPage(pagei).then(function (page) {
+							let pageNumber = page.pageNumber;
+							page.getTextContent({
+								includeMarkedContent: false,
+								disableCombineTextItems: false,
+							}).then(function (textContent) {
+								if (null != textContent.items) {
+									let page_text = '';
+									let last_item = null;
+									for (let itemsi = 0; itemsi < textContent.items.length; itemsi++) {
+										let item = textContent.items[itemsi] as TextItem;
+										// I think to add whitespace properly would be more complex and
+										// would require two loops.
+										if (last_item != null && last_item.str[last_item.str.length - 1] != ' ') {
+											let itemX = item.transform[5];
+											let lastItemX = last_item.transform[5];
+											let itemY = item.transform[4];
+											let lastItemY = last_item.transform[4];
+											if (itemX < lastItemX) page_text += '\r\n';
+											else if (itemY != lastItemY && last_item.str.match(/^(\s?[a-zA-Z])$|^(.+\s[a-zA-Z])$/) == null) page_text += ' ';
+										} // ends if may need to add whitespace
+
+										page_text += item.str;
+										last_item = item;
+									} // ends for every item of text
+
+									// textContent != null && console.log('page ' + pageNumber + ' finished.'); // " content: \n" + page_text);
+									pages[pageNumber] = page_text + '\n\n';
+								} // ends if has items
+
+								++complete;
+
+								// If all done, put pages in order and combine all
+								// text, then pass that to the callback
+								if (complete == total) {
+									// Using `setTimeout()` isn't a stable way of making sure
+									// the process has finished. Watch out for missed pages.
+									// A future version might do this with promises.
+									setTimeout(function () {
+										let full_text = '';
+										let num_pages = Object.keys(pages).length;
+										for (let pageNum = 1; pageNum <= num_pages; pageNum++) full_text += pages[pageNum];
+										setResultText({
+											...resultText,
+											[itemResult.result_id]: {
+												...itemResult,
+												resource: full_text,
+											},
+										});
+									}, 1000);
+								}
+							}); // ends page.getTextContent().then
+						}); // ends page.then
+					} // ends for every page
+				})
+				.catch((x) => console.log(x));
+		}
+	}, [result]);
+
+	useEffect(() => {
+		console.log(Object.keys(resultText).length);
+	}, [resultText]);
 
 	return (
 		<div className="relative overflow-hidden">
