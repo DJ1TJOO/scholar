@@ -61,6 +61,7 @@ const categories: categorie[] = [
 			'fosfor',
 			'eutrofiëring',
 			'ecosysteem',
+			'blauwalg',
 		],
 	},
 	{
