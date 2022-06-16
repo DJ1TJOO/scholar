@@ -80,7 +80,7 @@ const Home: NextPage = () => {
 	const { search } = router.query;
 
 	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
-	const [resultText, setResultText] = useState<Record<string, resultText>>(temp);
+	const [resultText, setResultText] = useState<{ [key: string]: resultText }>(temp as { [key: string]: resultText });
 
 	const getArticles = async (offset: number): Promise<any[]> => {
 		if (typeof search !== 'string') return [];
