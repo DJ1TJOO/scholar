@@ -277,13 +277,13 @@ const Home: NextPage = () => {
 					</div>
 
 					<div className={classNames('px-10 bg-gray-900 min-h-[20rem] pb-10', !search && 'hidden')} id="result">
-						<h2 className="font-medium leading-tight text-4xl mt-0 mb-2 text-indigo-600">Resultaten voor: '{search}'</h2>
+						<h2 className="font-medium leading-tight text-4xl mt-0 mb-2 text-indigo-600">Resultaten voor: &apos;{search}&apos;</h2>
 						{Object.keys(resultText).length < 1 ? (
 							<h3 className="font-medium leading-tight text-3xl mt-0 mb-2 text-indigo-400">Laden...</h3>
 						) : (
 							<>
 								{categories.map((category) => (
-									<div className="mt-4">
+									<div className="mt-4" key={category.id}>
 										<h3 className="font-medium leading-tight text-3xl mt-0 text-indigo-400">{category.title}</h3>
 										<ul className="list-disc ml-6">
 											{Object.values(resultText)
