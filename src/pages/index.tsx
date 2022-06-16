@@ -1,5 +1,5 @@
-import { Popover, Transition } from '@headlessui/react';
-import { MenuIcon, XIcon } from '@heroicons/react/outline';
+import { Disclosure, Combobox, Popover, Transition } from '@headlessui/react';
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MenuIcon, SelectorIcon, XIcon } from '@heroicons/react/outline';
 
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
@@ -79,6 +79,7 @@ const Home: NextPage = () => {
 	const router = useRouter();
 	const { search } = router.query;
 
+	const [selected, setSelected] = useState('');
 	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
 	const [resultText, setResultText] = useState<{ [key: string]: resultText }>(temp as unknown as { [key: string]: resultText });
 
@@ -223,7 +224,7 @@ const Home: NextPage = () => {
 				</header>
 
 				<main>
-					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">
+					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 lg:pb-14">
 						<div className="mx-auto max-w-7xl lg:px-8">
 							<div className="lg:grid lg:grid-cols-2 lg:gap-8">
 								<div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 sm:text-center lg:px-0 lg:text-left lg:flex lg:items-center">
@@ -238,21 +239,82 @@ const Home: NextPage = () => {
 										<div className="mt-10 sm:mt-12">
 											<div className="sm:flex">
 												<div className="min-w-0 flex-1">
-													<label htmlFor="search" className="sr-only">
-														zoek
-													</label>
-													<input
-														type="text"
-														value={query}
-														onChange={(e) => setQuery(e.target.value)}
-														placeholder="Voer uw zoekopdracht in"
-														className="block w-full px-4 py-3 rounded-md border-0 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
-													/>
+													<Combobox value={selected} onChange={setSelected}>
+														<div className="relative">
+															<Combobox.Button className="relative w-full cursor-default rounded-lg bg-white text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
+																<Combobox.Input
+																	className="block w-full px-4 py-3 rounded-md border-0 text-base text-gray-900 placeholder-gray-500 outline-none"
+																	value={query}
+																	onChange={(e: any) => {
+																		setQuery(e.target.value);
+																		setSelected(e.target.value);
+																	}}
+																/>
+																<span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+																	<SelectorIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+																</span>
+															</Combobox.Button>
+															<Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+																<Combobox.Options className="z-40 absolute mt-1 max-h-[30rem] w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+																	{categories.map((categorie, i) => {
+																		return (
+																			<>
+																				<Disclosure>
+																					{({ open }: { open: boolean }) => (
+																						<>
+																							<Disclosure.Button className="flex w-full justify-between py-2 pl-4 pr-4 text-left text-sm font-medium  hover:bg-indigo-400 hover:text-white">
+																								<span className={`inline-block truncate font-semibold`}>{categorie.title}</span>{' '}
+																								{open ? (
+																									<ChevronDownIcon className="inline-block w-4 h-4" />
+																								) : (
+																									<ChevronUpIcon className="inline-block w-4 h-4" />
+																								)}
+																							</Disclosure.Button>
+																							<Disclosure.Panel className="">
+																								{categorie.words.map((word, index) => (
+																									<Combobox.Option
+																										key={word + index}
+																										className={({ active }) =>
+																											`relative cursor-default select-none py-2 pl-10 pr-4 ${
+																												active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+																											}`
+																										}
+																										value={word}
+																									>
+																										{({ selected }) => (
+																											<>
+																												<span
+																													className={`block truncate ${
+																														selected ? 'font-medium' : 'font-normal'
+																													}`}
+																												>
+																													{word}
+																												</span>
+																												{selected ? (
+																													<span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indgo-400">
+																														<CheckIcon className="h-5 w-5" aria-hidden="true" />
+																													</span>
+																												) : null}
+																											</>
+																										)}
+																									</Combobox.Option>
+																								))}
+																							</Disclosure.Panel>
+																						</>
+																					)}
+																				</Disclosure>
+																			</>
+																		);
+																	})}
+																</Combobox.Options>
+															</Transition>
+														</div>
+													</Combobox>
 												</div>
 												<div className="mt-3 sm:mt-0 sm:ml-3">
 													<button
 														onClick={() => {
-															window.location.href = '/?search=' + query;
+															window.location.href = '/?search=' + selected;
 														}}
 														className="block w-full py-3 px-4 rounded-md shadow bg-indigo-500 text-white font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
 													>
