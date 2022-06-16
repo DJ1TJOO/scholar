@@ -10,6 +10,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				.join('&'),
 	)
 		.then((res) => res.json())
-		.then((serp) => res.json(serp))
+		.then((serp) => {
+			res.setHeader('Cache-Control', 's-maxage=86400');
+			res.json(serp);
+		})
 		.catch(() => res.status(500).json({ error: 'internal server error' }));
 }
