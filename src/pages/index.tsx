@@ -95,127 +95,127 @@ const Home: NextPage = () => {
 		return results.organic_results.filter((x) => x.resources).filter((x) => x.resources.some((x) => x.file_format === 'PDF'));
 	};
 
-	// useEffect(() => {
-	// 	if (typeof search !== 'string') return;
+	useEffect(() => {
+		if (typeof search !== 'string') return;
 
-	// 	(async () => {
-	// 		let offset = 0;
-	// 		const result: result[] = await getArticles(offset);
-	// 		while (result.length < 30) {
-	// 			offset += 20;
-	// 			result.push(...(await getArticles(offset)));
-	// 		}
+		(async () => {
+			let offset = 0;
+			const result: result[] = await getArticles(offset);
+			while (result.length < 30) {
+				offset += 20;
+				result.push(...(await getArticles(offset)));
+			}
 
-	// 		const newResultText = resultText;
-	// 		for (let i = 0; i < result.length; i++) {
-	// 			const itemResult = result[i];
-	// 			const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
-	// 			if (!resource) continue;
+			const newResultText = resultText;
+			for (let i = 0; i < result.length; i++) {
+				const itemResult = result[i];
+				const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
+				if (!resource) continue;
 
-	// 			try {
-	// 				const resultText = await new Promise((resolve: (value: resultText) => void, reject) => {
-	// 					PDFJS.getDocument({
-	// 						url: `https://corsproxy.io/?${encodeURIComponent(resource.link)}`,
-	// 					})
-	// 						.promise.then((pdf) => {
-	// 							let total = pdf.numPages;
-	// 							let pages: Record<number, string> = {};
-	// 							let complete = 0;
+				try {
+					const resultText = await new Promise((resolve: (value: resultText) => void, reject) => {
+						PDFJS.getDocument({
+							url: `https://corsproxy.io/?${encodeURIComponent(resource.link)}`,
+						})
+							.promise.then((pdf) => {
+								let total = pdf.numPages;
+								let pages: Record<number, string> = {};
+								let complete = 0;
 
-	// 							for (let pagei = 1; pagei <= total; pagei++) {
-	// 								pdf.getPage(pagei).then(function (page) {
-	// 									let pageNumber = page.pageNumber;
-	// 									page.getTextContent({
-	// 										includeMarkedContent: false,
-	// 										disableCombineTextItems: false,
-	// 									}).then(function (textContent) {
-	// 										if (null != textContent.items) {
-	// 											let page_text = '';
-	// 											let last_item = null;
-	// 											for (let itemsi = 0; itemsi < textContent.items.length; itemsi++) {
-	// 												let item = textContent.items[itemsi] as TextItem;
-	// 												// I think to add whitespace properly would be more complex and
-	// 												// would require two loops.
-	// 												if (last_item != null && last_item.str[last_item.str.length - 1] != ' ') {
-	// 													let itemX = item.transform[5];
-	// 													let lastItemX = last_item.transform[5];
-	// 													let itemY = item.transform[4];
-	// 													let lastItemY = last_item.transform[4];
-	// 													if (itemX < lastItemX) page_text += '\r\n';
-	// 													else if (itemY != lastItemY && last_item.str.match(/^(\s?[a-zA-Z])$|^(.+\s[a-zA-Z])$/) == null) page_text += ' ';
-	// 												} // ends if may need to add whitespace
+								for (let pagei = 1; pagei <= total; pagei++) {
+									pdf.getPage(pagei).then(function (page) {
+										let pageNumber = page.pageNumber;
+										page.getTextContent({
+											includeMarkedContent: false,
+											disableCombineTextItems: false,
+										}).then(function (textContent) {
+											if (null != textContent.items) {
+												let page_text = '';
+												let last_item = null;
+												for (let itemsi = 0; itemsi < textContent.items.length; itemsi++) {
+													let item = textContent.items[itemsi] as TextItem;
+													// I think to add whitespace properly would be more complex and
+													// would require two loops.
+													if (last_item != null && last_item.str[last_item.str.length - 1] != ' ') {
+														let itemX = item.transform[5];
+														let lastItemX = last_item.transform[5];
+														let itemY = item.transform[4];
+														let lastItemY = last_item.transform[4];
+														if (itemX < lastItemX) page_text += '\r\n';
+														else if (itemY != lastItemY && last_item.str.match(/^(\s?[a-zA-Z])$|^(.+\s[a-zA-Z])$/) == null) page_text += ' ';
+													} // ends if may need to add whitespace
 
-	// 												page_text += item.str;
-	// 												last_item = item;
-	// 											} // ends for every item of text
+													page_text += item.str;
+													last_item = item;
+												} // ends for every item of text
 
-	// 											// textContent != null && console.log('page ' + pageNumber + ' finished.'); // " content: \n" + page_text);
-	// 											pages[pageNumber] = page_text + '\n\n';
-	// 										} // ends if has items
+												// textContent != null && console.log('page ' + pageNumber + ' finished.'); // " content: \n" + page_text);
+												pages[pageNumber] = page_text + '\n\n';
+											} // ends if has items
 
-	// 										++complete;
+											++complete;
 
-	// 										// If all done, put pages in order and combine all
-	// 										// text, then pass that to the callback
-	// 										if (complete == total) {
-	// 											// Using `setTimeout()` isn't a stable way of making sure
-	// 											// the process has finished. Watch out for missed pages.
-	// 											// A future version might do this with promises.
-	// 											setTimeout(function () {
-	// 												let full_text = '';
-	// 												let num_pages = Object.keys(pages).length;
-	// 												for (let pageNum = 1; pageNum <= num_pages; pageNum++) full_text += pages[pageNum];
+											// If all done, put pages in order and combine all
+											// text, then pass that to the callback
+											if (complete == total) {
+												// Using `setTimeout()` isn't a stable way of making sure
+												// the process has finished. Watch out for missed pages.
+												// A future version might do this with promises.
+												setTimeout(function () {
+													let full_text = '';
+													let num_pages = Object.keys(pages).length;
+													for (let pageNum = 1; pageNum <= num_pages; pageNum++) full_text += pages[pageNum];
 
-	// 												const wordCounts: Record<string, number> = {};
-	// 												const words = full_text.split(/\b/);
+													const wordCounts: Record<string, number> = {};
+													const words = full_text.split(/\b/);
 
-	// 												for (var i = 0; i < words.length; i++) {
-	// 													const word = words[i].toLowerCase();
-	// 													wordCounts[word] = (wordCounts[word] || 0) + 1;
-	// 												}
+													for (var i = 0; i < words.length; i++) {
+														const word = words[i].toLowerCase();
+														wordCounts[word] = (wordCounts[word] || 0) + 1;
+													}
 
-	// 												const wordsArray = Object.keys(wordCounts).map((x) => ({ word: x, count: wordCounts[x] }));
-	// 												wordsArray.sort((a, b) => b.count - a.count);
-	// 												resolve({
-	// 													...itemResult,
-	// 													resource: full_text,
-	// 													words: wordsArray,
-	// 												});
-	// 											}, 1000);
-	// 										}
-	// 									}); // ends page.getTextContent().then
-	// 								}); // ends page.then
-	// 							} // ends for every page
-	// 						})
-	// 						.catch((x) => reject(x));
-	// 				});
-	// 				newResultText[itemResult.result_id] = resultText;
-	// 			} catch (error) {}
-	// 		}
+													const wordsArray = Object.keys(wordCounts).map((x) => ({ word: x, count: wordCounts[x] }));
+													wordsArray.sort((a, b) => b.count - a.count);
+													resolve({
+														...itemResult,
+														resource: full_text,
+														words: wordsArray,
+													});
+												}, 1000);
+											}
+										}); // ends page.getTextContent().then
+									}); // ends page.then
+								} // ends for every page
+							})
+							.catch((x) => reject(x));
+					});
+					newResultText[itemResult.result_id] = resultText;
+				} catch (error) {}
+			}
 
-	// 		for (const key in newResultText) {
-	// 			const resultText = newResultText[key];
-	// 			let currentCategorie = { id: '', counted: 0 };
-	// 			for (let i = 0; i < categories.length; i++) {
-	// 				const categorie = categories[i];
+			for (const key in newResultText) {
+				const resultText = newResultText[key];
+				let currentCategorie = { id: '', counted: 0 };
+				for (let i = 0; i < categories.length; i++) {
+					const categorie = categories[i];
 
-	// 				const words = resultText.words.filter((x) => categorie.words.some((y) => x.word.includes(y)));
-	// 				const counted = words.reduce((partialSum, x) => partialSum + x.count, 0);
-	// 				if (counted > currentCategorie.counted) {
-	// 					currentCategorie = {
-	// 						id: categorie.id,
-	// 						counted,
-	// 					};
-	// 				}
-	// 			}
+					const words = resultText.words.filter((x) => categorie.words.some((y) => x.word.includes(y)));
+					const counted = words.reduce((partialSum, x) => partialSum + x.count, 0);
+					if (counted > currentCategorie.counted) {
+						currentCategorie = {
+							id: categorie.id,
+							counted,
+						};
+					}
+				}
 
-	// 			if (currentCategorie.counted > 0) resultText.category = currentCategorie;
-	// 		}
+				if (currentCategorie.counted > 0) resultText.category = currentCategorie;
+			}
 
-	// 		setResultText(newResultText);
-	// 		console.log(newResultText);
-	// 	})();
-	// }, [search]);
+			setResultText(newResultText);
+			console.log(newResultText);
+		})();
+	}, [search]);
 
 	return (
 		<>
@@ -225,7 +225,7 @@ const Home: NextPage = () => {
 				</header>
 
 				<main>
-					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 lg:pb-14">
+					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 lg:pb-14 pb-[30rem]">
 						<div className="mx-auto max-w-7xl lg:px-8">
 							<div className="lg:grid lg:grid-cols-2 lg:gap-8">
 								<div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 sm:text-center lg:px-0 lg:text-left lg:flex lg:items-center">
@@ -256,7 +256,7 @@ const Home: NextPage = () => {
 																</span>
 															</Combobox.Button>
 															<Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-																<Combobox.Options className="z-40 absolute mt-1 max-h-[30rem] w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+																<Combobox.Options className="z-50 absolute mt-1 max-h-[30rem] w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
 																	{categories.map((categorie, i) => {
 																		return (
 																			<>
