@@ -82,7 +82,7 @@ const Home: NextPage = () => {
 
 	const [selected, setSelected] = useState('');
 	const [query, setQuery] = useState(typeof search === 'string' ? search : '');
-	const [resultText, setResultText] = useState<{ [key: string]: resultText }>(temp as unknown as { [key: string]: resultText });
+	const [resultText, setResultText] = useState<{ [key: string]: resultText } | null>(null);
 
 	const getArticles = async (offset: number): Promise<any[]> => {
 		if (typeof search !== 'string') return [];
@@ -92,7 +92,7 @@ const Home: NextPage = () => {
 			organic_results: result[];
 		} = await scholar.language('nl').articles(1).start(offset).maxResults(20).search(search);
 
-		return results.organic_results.filter((x) => x.resources).filter((x) => x.resources.some((x) => x.file_format === 'PDF'));
+		return results.organic_results?.filter((x) => x.resources)?.filter((x) => x.resources.some((x) => x.file_format === 'PDF')) || null;
 	};
 
 	useEffect(() => {
@@ -100,13 +100,17 @@ const Home: NextPage = () => {
 
 		(async () => {
 			let offset = 0;
-			const result: result[] = await getArticles(offset);
+			const result: result[] = (await getArticles(offset)) || [];
 			while (result.length < 30) {
 				offset += 20;
-				result.push(...(await getArticles(offset)));
+				const results = await getArticles(offset);
+
+				if (results == null) break;
+
+				result.push(...results);
 			}
 
-			const newResultText = resultText;
+			const newResultText = resultText || {};
 			for (let i = 0; i < result.length; i++) {
 				const itemResult = result[i];
 				const resource = itemResult.resources.find((x) => x.file_format === 'PDF');
@@ -260,7 +264,7 @@ const Home: NextPage = () => {
 																	{categories.map((categorie, i) => {
 																		return (
 																			<>
-																				<Disclosure>
+																				<Disclosure key={i}>
 																					{({ open }: { open: boolean }) => (
 																						<>
 																							<Disclosure.Button className="flex w-full justify-between py-2 pl-4 pr-4 text-left text-sm font-medium  hover:bg-indigo-400 hover:text-white">
@@ -337,7 +341,7 @@ const Home: NextPage = () => {
 
 					<div className={classNames('px-10 bg-gray-900 min-h-[20rem] pb-10', !search && 'hidden')} id="result">
 						<h2 className="font-medium leading-tight text-4xl mt-0 mb-2 text-indigo-600">Resultaten voor: &apos;{search}&apos;</h2>
-						{Object.keys(resultText).length < 1 ? (
+						{!resultText ? (
 							<h3 className="font-medium leading-tight text-3xl mt-0 mb-2 text-indigo-400">Laden...</h3>
 						) : (
 							<>
