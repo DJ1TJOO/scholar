@@ -225,7 +225,7 @@ const Home: NextPage = () => {
 				</header>
 
 				<main>
-					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 lg:pb-14 pb-[30rem]">
+					<div className="pt-10 bg-gray-900 sm:pt-16 lg:pt-8 pb-[30rem]">
 						<div className="mx-auto max-w-7xl lg:px-8">
 							<div className="lg:grid lg:grid-cols-2 lg:gap-8">
 								<div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 sm:text-center lg:px-0 lg:text-left lg:flex lg:items-center">
