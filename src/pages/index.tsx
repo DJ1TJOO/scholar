@@ -92,7 +92,7 @@ const Home: NextPage = () => {
 			organic_results: result[];
 		} = await scholar.language('nl').articles(1).start(offset).maxResults(20).search(search);
 
-		return results.organic_results?.filter((x) => x.resources)?.filter((x) => x.resources.some((x) => x.file_format === 'PDF')) || null;
+		return results.organic_results?.filter((x) => !!x.resources)?.filter((x) => x.resources.some((x) => x.file_format === 'PDF')) || null;
 	};
 
 	useEffect(() => {
